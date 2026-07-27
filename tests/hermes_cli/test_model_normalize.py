@@ -146,6 +146,26 @@ class TestCopilotModelNormalization:
         assert normalize_model_for_provider("openai/gpt-5.4", "openai-codex") == "gpt-5.4"
 
 
+class TestOpenAICodexGPT56Canonicalization:
+    """ChatGPT OAuth accepts concrete GPT-5.6 tiers, not dead aliases."""
+
+    @pytest.mark.parametrize("model,expected", [
+        ("gpt-5.6", "gpt-5.6-sol"),
+        ("openai/gpt-5.6", "gpt-5.6-sol"),
+        ("gpt-5.6-sol", "gpt-5.6-sol"),
+        ("gpt-5.6-sol-pro", "gpt-5.6-sol"),
+        ("openai/gpt-5.6-sol-pro", "gpt-5.6-sol"),
+        ("gpt-5.6-terra-pro", "gpt-5.6-terra"),
+        ("gpt-5.6-luna-pro", "gpt-5.6-luna"),
+    ])
+    def test_codex_oauth_uses_supported_wire_slug(self, model, expected):
+        assert normalize_model_for_provider(model, "openai-codex") == expected
+
+    def test_direct_openai_provider_is_unchanged(self):
+        """Public API model handling is outside the Codex OAuth guard."""
+        assert normalize_model_for_provider("gpt-5.6", "openai") == "gpt-5.6"
+
+
 # ── Aggregator providers (regression) ──────────────────────────────────
 
 class TestAggregatorProviders:

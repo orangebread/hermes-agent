@@ -459,7 +459,25 @@ def normalize_model_for_provider(model_input: str, target_provider: str) -> str:
         stripped = _strip_matching_provider_prefix(name, provider)
         if stripped == name and name.startswith("openai/"):
             # openai-codex maps openai/gpt-5.4 -> gpt-5.4
-            return name.split("/", 1)[1]
+            stripped = name.split("/", 1)[1]
+
+        if provider == "openai-codex":
+            # The official Codex client treats bare ``gpt-5.6`` as the Sol
+            # tier, but the ChatGPT OAuth Responses endpoint does not: it
+            # rejects the bare family name with HTTP 400.  Hermes also
+            # temporarily surfaced public-API-style ``*-pro`` variants that
+            # the same OAuth endpoint rejects.  Canonicalize both forms at
+            # the final provider boundary so config, gateway /model
+            # overrides, fallbacks, and resumed sessions cannot send a dead
+            # wire slug.  Direct OpenAI API routing is intentionally
+            # unaffected because its provider is ``openai``, not
+            # ``openai-codex``.
+            codex_model = stripped.lower()
+            if codex_model == "gpt-5.6":
+                return "gpt-5.6-sol"
+            for tier in ("sol", "terra", "luna"):
+                if codex_model == f"gpt-5.6-{tier}-pro":
+                    return f"gpt-5.6-{tier}"
         return stripped
 
     # --- DeepSeek: map to one of two canonical names ---
